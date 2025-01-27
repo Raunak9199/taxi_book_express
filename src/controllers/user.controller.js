@@ -5,11 +5,13 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, userName, password } = req.body;
+  const { fullName, email, userName, role, password } = req.body;
   console.log("email: ", email);
 
   if (
-    [fullName, email, userName, password].some((field) => field?.trim() === "")
+    [fullName, email, userName, role, password].some(
+      (field) => field?.trim() === ""
+    )
   ) {
     return new ApiError(400, "All fields are required");
   }
@@ -50,7 +52,9 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering user.");
   }
-  return res.status(201).json(new ApiResponse(201, "Successfully Registered"));
+  return res
+    .status(201)
+    .json(new ApiResponse(201, createdUser, "Successfully Registered"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -230,6 +234,34 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User Avatar Updated Successfully."));
 });
 
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find().select("-password");
+  if (!users) {
+    throw res.status(500).json(ApiResponse(200, {}, "Failed to fetch users"));
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users retrieved successfully"));
+});
+
+const getUserbyRole = asyncHandler(async (req, res) => {
+  const role = req.params;
+
+  if (role === "") {
+    return res.status(400).json(ApiResponse(400, {}, "Role is required"));
+  }
+  const users = await User.find({ role });
+
+  if (!users) {
+    return res
+      .status(404)
+      .json(ApiResponse(404, {}, "No users found with the provided role"));
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, `${role}s fetched successfully`));
+});
+
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -306,4 +338,5 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
+  getAllUsers,
 };

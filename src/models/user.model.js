@@ -30,12 +30,10 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      /*  validate: {
-        validator: function (v) {
-          return /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(v); // Validates URL format
-        },
+      validate: {
+        validator: (v) => /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(v),
         message: "Invalid URL format for avatar",
-      }, */
+      },
     },
     password: {
       type: String,
@@ -44,7 +42,7 @@ const userSchema = new Schema(
     refreshToken: String,
     role: {
       type: String,
-      enum: ["user", "driver", "admin"],
+      enum: ["user", "driver", "admin", "rider"],
       required: true,
       default: "user",
     },
@@ -76,9 +74,9 @@ userSchema.methods.generateAccessToken = function () {
       userName: this.userName,
       fullName: this.fullName,
     },
-    process.env.ACCCES_TOKEN_SECRET,
+    process.env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn: process.env.ACCCES_TOKEN_EXPIRY,
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
     }
   );
 };
@@ -112,7 +110,7 @@ const driverSchema = new Schema(
     },
     availabilityStatus: {
       type: Boolean,
-      default: true, 
+      default: true,
     },
     totalEarnings: {
       type: Number,
