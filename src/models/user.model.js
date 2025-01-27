@@ -95,8 +95,30 @@ userSchema.methods.generateRefreshToken = function () {
 export const User = mongoose.model("User", userSchema);
 
 //! DRIVER Schema
+
+const documentSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["License", "Registration", "Insurance"],
+    required: true,
+  },
+  fileUrl: {
+    type: String,
+    required: true,
+  },
+  isVerified: {
+    type: Boolean,
+    required: true,
+  },
+});
 const driverSchema = new Schema(
   {
+    role: {
+      type: String,
+      default: "driver",
+      enum: ["driver"], // Restrict role to "driver" only
+      required: true,
+    },
     licenseNumber: {
       type: String,
       required: true,
@@ -131,20 +153,32 @@ const driverSchema = new Schema(
       max: 5,
       default: 0,
     },
-    documents: [
-      {
-        type: { type: String }, // e.g., License, Insurance
-        fileUrl: String,
-        isVerified: { type: Boolean, default: false },
+    document: documentSchema /* {
+      type: {
+        type: String,
+        required: true, // Document type is mandatory
+        enum: ["License", "Insurance", "Registration"], // Specify allowed types
       },
-    ],
+      fileUrl: {
+        type: String,
+        required: true,
+        validate: {
+          validator: (v) => /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(v),
+          message: "Invalid URL format for document fileUrl",
+        },
+      },
+      isVerified: {
+        type: Boolean,
+        default: false,
+      },
+    }, */,
   },
   { timestamps: true }
 );
 
 export const Driver = User.discriminator("Driver", driverSchema);
 
-//! RIDER Schema
+/* //! RIDER Schema
 const riderSchema = new Schema(
   {
     savedLocations: [
@@ -183,7 +217,7 @@ const riderSchema = new Schema(
   { timestamps: true }
 );
 
-export const Rider = User.discriminator("Rider", riderSchema);
+export const Rider = User.discriminator("Rider", riderSchema); */
 
 //! Admin Schema
 const adminSchema = new Schema(

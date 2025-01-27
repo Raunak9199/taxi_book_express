@@ -20,6 +20,10 @@ router.route("/register").post(
       name: "avatar",
       maxCount: 1,
     },
+    {
+      name: "vehicleDocDetail", // For driver's vehicle document
+      maxCount: 1,
+    },
   ]),
   registerUser
 );

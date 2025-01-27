@@ -18,8 +18,10 @@ app.use(cookieParser());
 
 // routes import
 import userRouter from "./routes/user.route.js";
+import driverRouter from "./routes/driver.route.js";
 
 // routes declaration
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/drivers", driverRouter);
 
 export { app };

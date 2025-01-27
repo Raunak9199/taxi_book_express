@@ -1,67 +1,277 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { User } from "../models/user.model.js";
+import { User, Driver, Admin } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+// const registerUser = asyncHandler(async (req, res) => {
+//   const { fullName, email, userName, role, password } = req.body;
+//   console.log("role: ", role);
+
+//   if (
+//     [fullName, email, userName, role, password].some(
+//       (field) => field?.trim() === ""
+//     )
+//   ) {
+//     return res
+//       .status(400)
+//       .json(new ApiResponse(400, {}, "All fields are required"));
+//   }
+
+//   const existingUser = await User.findOne({
+//     $or: [{ email }, { userName }],
+//   });
+
+//   if (existingUser) {
+//     return res
+//       .status(409)
+//       .json(new ApiResponse(409, {}, "User already exists"));
+//     // throw new ApiError(409, "User already exists");
+//   }
+
+//   const avatarLocalPath = req.files?.avatar[0]?.path;
+
+//   console.log("avatarLocalPath:", avatarLocalPath);
+
+//   if (!avatarLocalPath) {
+//     return res.status(400).json(new ApiResponse(400, {}, "Avatar is required"));
+//   }
+
+//   const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+//   if (!avatar) {
+//     return res
+//       .status(400)
+//       .json(new ApiResponse(400, {}, "Avatar file is required"));
+//   }
+
+//   // DB Entry
+//   // Role-based document creation
+//   let user;
+//   if (role === "driver") {
+//     // Create driver with required fields (initialize empty values)
+//     user = await Driver.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//       licenseNumber: "T",
+//       vehicleDetails: {
+//         vehicleType: "",
+//         model: "",
+//         registrationNumber: "",
+//         color: "",
+//       },
+//     });
+//   } else if (role === "admin") {
+//     // Create driver with required fields (initialize empty values)
+//     user = await Admin.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//       // licenseNumber: "TEMP_LICENSE", // Placeholder (update later)
+//       // vehicleDetails: {
+//       //   vehicleType: "TEMP_TYPE",
+//       //   model: "TEMP_MODEL",
+//       //   registrationNumber: "TEMP_REG",
+//       //   color: "TEMP_COLOR",
+//       // },
+//     });
+//   } else {
+//     // Create regular user
+//     user = await User.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//     });
+//   }
+//   /* const user = await User.create({
+//     fullName: fullName,
+//     avatar: avatar?.url,
+//     email: email,
+//     password: password,
+//     role: role,
+//     userName: userName.toLowerCase(),
+//   }); */
+
+//   const createdUser = await User.findById(user._id).select(
+//     "-password -refreshToken"
+//   );
+
+//   if (!createdUser) {
+//     throw new ApiError(500, "Something went wrong while registering user.");
+//   }
+//   return res
+//     .status(201)
+//     .json(new ApiResponse(201, createdUser, "Successfully Registered"));
+// });
+
 const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, userName, role, password } = req.body;
-  console.log("email: ", email);
+  // Extract driver-specific fields from request body
+  const {
+    fullName,
+    email,
+    userName,
+    role,
+    password,
+    licenceNumber, // Corrected to match the request body
+    vehicleType,
+    model,
+    registrationNumber,
+    color,
+    type, // Document type (e.g. "License")
+    isVerified, // Whether the document is verified
+  } = req.body;
 
-  if (
-    [fullName, email, userName, role, password].some(
-      (field) => field?.trim() === ""
-    )
-  ) {
-    return new ApiError(400, "All fields are required");
+  console.log("role: ", role);
+
+  // Validate common fields
+  const commonFields = [fullName, email, userName, role, password];
+  if (commonFields.some((field) => field?.trim() === "")) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "All fields are required"));
   }
 
-  const existingUser = await User.findOne({
-    $or: [{ email }, { userName }],
-  });
+  // Validate driver-specific fields if role is driver
+  if (role === "driver") {
+    const driverFields = [
+      licenceNumber,
+      vehicleType,
+      model,
+      registrationNumber,
+      color,
+    ];
+    if (driverFields.some((field) => !field?.trim())) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            "Driver requires: licenceNumber, vehicleType, model, registrationNumber, color"
+          )
+        );
+    }
+  }
 
+  // Check for existing user (same email or userName)
+  const existingUser = await User.findOne({ $or: [{ email }, { userName }] });
   if (existingUser) {
-    return new ApiError(409, "User already exists");
+    return res
+      .status(409)
+      .json(new ApiResponse(409, {}, "User already exists"));
   }
 
+  // Handle avatar upload
   const avatarLocalPath = req.files?.avatar[0]?.path;
-
+  const vehicleDocPath = req.files?.vehicleDocDetail[0]?.path;
   if (!avatarLocalPath) {
-    return new ApiError(400, "Avatar is required");
+    return res.status(400).json(new ApiResponse(400, {}, "Avatar is required"));
+  }
+  if (role === "driver" && !vehicleDocPath) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Detail proof is required"));
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  if (!avatar) {
-    throw new ApiError(400, "Avatar file is required.");
+  if (!avatar?.url) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Avatar upload failed"));
   }
 
-  // DB Entry
-  const user = await User.create({
-    fullName: fullName,
-    avatar: avatar?.url,
-    email: email,
-    password: password,
-    userName: userName.toLowerCase(),
-  });
+  const vehicleDoc = await uploadOnCloudinary(vehicleDocPath);
+  if (role === "driver" && !vehicleDoc?.url) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Vehicle document upload failed"));
+  }
 
+  // Create user based on role
+  let user;
+  try {
+    switch (role) {
+      case "driver":
+        user = await Driver.create({
+          fullName,
+          email,
+          userName: userName.toLowerCase(),
+          password,
+          role,
+          avatar: avatar.url,
+          licenseNumber: licenceNumber, // Use validated field
+          vehicleDetails: {
+            vehicleType,
+            model,
+            registrationNumber,
+            color,
+          },
+          document: {
+            type, // e.g., "License"
+            fileUrl: vehicleDoc.url,
+            isVerified: isVerified === "true", // Convert to boolean
+          },
+        });
+        break;
+
+      case "admin":
+        user = await Admin.create({
+          fullName,
+          email,
+          userName: userName.toLowerCase(),
+          password,
+          role,
+          avatar: avatar.url,
+        });
+        break;
+
+      default:
+        user = await User.create({
+          fullName,
+          email,
+          userName: userName.toLowerCase(),
+          password,
+          role,
+          avatar: avatar.url,
+        });
+    }
+  } catch (error) {
+    // Handle unique constraint errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, `${field} already exists`));
+    }
+    throw error;
+  }
+
+  // Return created user without sensitive data
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
-
-  if (!createdUser) {
-    throw new ApiError(500, "Something went wrong while registering user.");
-  }
   return res
     .status(201)
-    .json(new ApiResponse(201, createdUser, "Successfully Registered"));
+    .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
   const { email, userName, password } = req.body;
 
   if (!(userName || email)) {
-    return new ApiError(400, "Username or email is required.");
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Username or email is required"));
   }
 
   const user = await User.findOne({
@@ -69,13 +279,13 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    return new ApiError(404, "User not found.");
+    throw new ApiError(404, "User not found.");
   }
 
   const isPassworValid = await user.isPasswordCorrect(password);
 
   if (!isPassworValid) {
-    return new ApiError(401, "Invalid password.");
+    throw new ApiError(401, "Invalid password.");
   }
   const token = await generateAccessAndRefreshTokens(user._id);
 
@@ -339,4 +549,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   getAllUsers,
+  getUserbyRole,
 };
