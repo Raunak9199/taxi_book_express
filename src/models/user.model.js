@@ -22,6 +22,7 @@ const userSchema = new Schema(
       trim: true,
       match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
+    phoneNumber: { type: String, required: true, unique: true },
     fullName: {
       type: String,
       required: true,
@@ -111,6 +112,15 @@ const documentSchema = new mongoose.Schema({
     required: true,
   },
 });
+
+const rideHistorySchema = new Schema({
+  rideId: { type: String, required: true },
+  date: { type: Date, required: true },
+  amountEarned: { type: Number, required: true },
+  pickupLocation: { type: String, required: true },
+  dropLocation: { type: String, required: true },
+});
+
 const driverSchema = new Schema(
   {
     role: {
@@ -138,45 +148,57 @@ const driverSchema = new Schema(
       type: Number,
       default: 0,
     },
-    rideHistory: [
-      {
-        rideId: String,
-        date: Date,
-        amountEarned: Number,
-        pickupLocation: String,
-        dropLocation: String,
-      },
-    ],
+    rideHistory: [rideHistorySchema],
     rating: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
+      average: { type: Number, min: 0, max: 5, default: 0 },
+      totalRatings: { type: Number, default: 0 },
+      ratingSum: { type: Number, default: 0 },
     },
-    document: documentSchema /* {
+
+    document: documentSchema,
+    location: {
       type: {
-        type: String,
-        required: true, // Document type is mandatory
-        enum: ["License", "Insurance", "Registration"], // Specify allowed types
-      },
-      fileUrl: {
-        type: String,
+        type: String, // GeoJSON type must be 'Point'
+        enum: ["Point"],
         required: true,
-        validate: {
-          validator: (v) => /^https?:\/\/[^\s/$.?#].[^\s]*$/.test(v),
-          message: "Invalid URL format for document fileUrl",
-        },
       },
-      isVerified: {
-        type: Boolean,
-        default: false,
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
       },
-    }, */,
+    },
   },
   { timestamps: true }
 );
 
+driverSchema.index({ location: "2dsphere" });
+
 export const Driver = User.discriminator("Driver", driverSchema);
+
+//! Admin Schema
+const adminSchema = new Schema(
+  {
+    permissions: [
+      {
+        type: String, // e.g., "manageUsers", "viewReports", etc.
+      },
+    ],
+    managedRegions: [
+      {
+        type: String, // Specifies the regions the admin manages
+      },
+    ],
+    loginHistory: [
+      {
+        ipAddress: String,
+        date: { type: Date, default: Date.now },
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+export const Admin = User.discriminator("Admin", adminSchema);
 
 /* //! RIDER Schema
 const riderSchema = new Schema(
@@ -218,31 +240,6 @@ const riderSchema = new Schema(
 );
 
 export const Rider = User.discriminator("Rider", riderSchema); */
-
-//! Admin Schema
-const adminSchema = new Schema(
-  {
-    permissions: [
-      {
-        type: String, // e.g., "manageUsers", "viewReports", etc.
-      },
-    ],
-    managedRegions: [
-      {
-        type: String, // Specifies the regions the admin manages
-      },
-    ],
-    loginHistory: [
-      {
-        ipAddress: String,
-        date: { type: Date, default: Date.now },
-      },
-    ],
-  },
-  { timestamps: true }
-);
-
-export const Admin = User.discriminator("Admin", adminSchema);
 
 /* 
 Shared Utility Functions

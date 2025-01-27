@@ -119,6 +119,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const {
     fullName,
     email,
+    phoneNumber,
     userName,
     role,
     password,
@@ -134,7 +135,7 @@ const registerUser = asyncHandler(async (req, res) => {
   console.log("role: ", role);
 
   // Validate common fields
-  const commonFields = [fullName, email, userName, role, password];
+  const commonFields = [fullName, email, phoneNumber, userName, role, password];
   if (commonFields.some((field) => field?.trim() === "")) {
     return res
       .status(400)
@@ -205,6 +206,7 @@ const registerUser = asyncHandler(async (req, res) => {
         user = await Driver.create({
           fullName,
           email,
+          phoneNumber,
           userName: userName.toLowerCase(),
           password,
           role,
@@ -228,6 +230,7 @@ const registerUser = asyncHandler(async (req, res) => {
         user = await Admin.create({
           fullName,
           email,
+          phoneNumber,
           userName: userName.toLowerCase(),
           password,
           role,
@@ -239,6 +242,7 @@ const registerUser = asyncHandler(async (req, res) => {
         user = await User.create({
           fullName,
           email,
+          phoneNumber,
           userName: userName.toLowerCase(),
           password,
           role,

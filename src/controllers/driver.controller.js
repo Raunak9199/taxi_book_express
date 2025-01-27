@@ -123,7 +123,7 @@ const updateDriverLicense = asyncHandler(async (req, res) => {
   // Update the document if provided
   // console.log("Update document", validatedDocument);
   if (validatedDocument) {
-    driver.document = validatedDocument; // Ensure it's an array, even with a single document
+    driver.document = validatedDocument;
     console.log("doc:", driver.document);
   } else {
     driver.document = {
