@@ -19,9 +19,13 @@ app.use(cookieParser());
 // routes import
 import userRouter from "./routes/user.route.js";
 import driverRouter from "./routes/driver.route.js";
+import { initializeBookingRoutes } from "./routes/booking.route.js";
 
 // routes declaration
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/drivers", driverRouter);
-
-export { app };
+export const initializeRoutes = (io) => {
+  app.use("/api/v1/users", userRouter);
+  app.use("/api/v1/drivers", driverRouter);
+  app.use("/api/v1/bookings", initializeBookingRoutes(io));
+  return app;
+};
+// export { app };

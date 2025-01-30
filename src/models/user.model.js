@@ -135,7 +135,11 @@ const driverSchema = new Schema(
       unique: true,
     },
     vehicleDetails: {
-      vehicleType: { type: String, required: true }, // e.g., Car, Bike
+      vehicleType: {
+        type: String,
+        required: true,
+        enum: ["Car", "Bike", "Auto"],
+      },
       model: { type: String, required: true },
       registrationNumber: { type: String, required: true, unique: true },
       color: { type: String, required: true },
@@ -154,19 +158,25 @@ const driverSchema = new Schema(
       totalRatings: { type: Number, default: 0 },
       ratingSum: { type: Number, default: 0 },
     },
-
+    capacity: {
+      type: Number,
+      default: 1,
+      required: true,
+      min: [1, "Capacity must be at least 1"],
+    },
     document: documentSchema,
     location: {
       type: {
         type: String, // GeoJSON type must be 'Point'
         enum: ["Point"],
-        required: true,
+        // required: true,
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        required: true,
+        // required: true,
       },
     },
+    socketId: { type: String }, // Track active WebSocket connection
   },
   { timestamps: true }
 );

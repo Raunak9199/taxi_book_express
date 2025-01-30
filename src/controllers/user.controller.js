@@ -4,116 +4,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User, Driver, Admin } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-// const registerUser = asyncHandler(async (req, res) => {
-//   const { fullName, email, userName, role, password } = req.body;
-//   console.log("role: ", role);
-
-//   if (
-//     [fullName, email, userName, role, password].some(
-//       (field) => field?.trim() === ""
-//     )
-//   ) {
-//     return res
-//       .status(400)
-//       .json(new ApiResponse(400, {}, "All fields are required"));
-//   }
-
-//   const existingUser = await User.findOne({
-//     $or: [{ email }, { userName }],
-//   });
-
-//   if (existingUser) {
-//     return res
-//       .status(409)
-//       .json(new ApiResponse(409, {}, "User already exists"));
-//     // throw new ApiError(409, "User already exists");
-//   }
-
-//   const avatarLocalPath = req.files?.avatar[0]?.path;
-
-//   console.log("avatarLocalPath:", avatarLocalPath);
-
-//   if (!avatarLocalPath) {
-//     return res.status(400).json(new ApiResponse(400, {}, "Avatar is required"));
-//   }
-
-//   const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-//   if (!avatar) {
-//     return res
-//       .status(400)
-//       .json(new ApiResponse(400, {}, "Avatar file is required"));
-//   }
-
-//   // DB Entry
-//   // Role-based document creation
-//   let user;
-//   if (role === "driver") {
-//     // Create driver with required fields (initialize empty values)
-//     user = await Driver.create({
-//       fullName,
-//       email,
-//       userName: userName.toLowerCase(),
-//       password,
-//       role,
-//       avatar: avatar.url,
-//       licenseNumber: "T",
-//       vehicleDetails: {
-//         vehicleType: "",
-//         model: "",
-//         registrationNumber: "",
-//         color: "",
-//       },
-//     });
-//   } else if (role === "admin") {
-//     // Create driver with required fields (initialize empty values)
-//     user = await Admin.create({
-//       fullName,
-//       email,
-//       userName: userName.toLowerCase(),
-//       password,
-//       role,
-//       avatar: avatar.url,
-//       // licenseNumber: "TEMP_LICENSE", // Placeholder (update later)
-//       // vehicleDetails: {
-//       //   vehicleType: "TEMP_TYPE",
-//       //   model: "TEMP_MODEL",
-//       //   registrationNumber: "TEMP_REG",
-//       //   color: "TEMP_COLOR",
-//       // },
-//     });
-//   } else {
-//     // Create regular user
-//     user = await User.create({
-//       fullName,
-//       email,
-//       userName: userName.toLowerCase(),
-//       password,
-//       role,
-//       avatar: avatar.url,
-//     });
-//   }
-//   /* const user = await User.create({
-//     fullName: fullName,
-//     avatar: avatar?.url,
-//     email: email,
-//     password: password,
-//     role: role,
-//     userName: userName.toLowerCase(),
-//   }); */
-
-//   const createdUser = await User.findById(user._id).select(
-//     "-password -refreshToken"
-//   );
-
-//   if (!createdUser) {
-//     throw new ApiError(500, "Something went wrong while registering user.");
-//   }
-//   return res
-//     .status(201)
-//     .json(new ApiResponse(201, createdUser, "Successfully Registered"));
-// });
-
 const registerUser = asyncHandler(async (req, res) => {
   // Extract driver-specific fields from request body
   const {
@@ -482,14 +372,21 @@ const generateAccessAndRefreshTokens = async (userId) => {
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    console.log("user:", user);
+    console.log("acces:", accessToken);
+    console.log("refr:", refreshToken);
 
+    /* user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false }); */
+    await User.findByIdAndUpdate(userId, { refreshToken });
+
+    console.log("refr after:", user.refreshToken);
     return { accessToken, refreshToken };
   } catch (error) {
     throw new ApiError(
       500,
-      "Something went wrong while generating refresh and access token."
+      "Something went wrong while generating refresh and access token." +
+        error.message
     );
   }
 };
@@ -521,19 +418,19 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, rnewefreshToken } =
+    const { accessToken, newRefreshToken } =
       await generateAccessAndRefreshTokens(user._id);
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", rnewefreshToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
       .json(
         new ApiResponse(
           200,
           {
             accessToken,
-            refreshToken: rnewefreshToken,
+            refreshToken: newRefreshToken,
           },
           "Access Token refreshed successfully."
         )
@@ -555,3 +452,113 @@ export {
   getAllUsers,
   getUserbyRole,
 };
+
+// const registerUser = asyncHandler(async (req, res) => {
+//   const { fullName, email, userName, role, password } = req.body;
+//   console.log("role: ", role);
+
+//   if (
+//     [fullName, email, userName, role, password].some(
+//       (field) => field?.trim() === ""
+//     )
+//   ) {
+//     return res
+//       .status(400)
+//       .json(new ApiResponse(400, {}, "All fields are required"));
+//   }
+
+//   const existingUser = await User.findOne({
+//     $or: [{ email }, { userName }],
+//   });
+
+//   if (existingUser) {
+//     return res
+//       .status(409)
+//       .json(new ApiResponse(409, {}, "User already exists"));
+//     // throw new ApiError(409, "User already exists");
+//   }
+
+//   const avatarLocalPath = req.files?.avatar[0]?.path;
+
+//   console.log("avatarLocalPath:", avatarLocalPath);
+
+//   if (!avatarLocalPath) {
+//     return res.status(400).json(new ApiResponse(400, {}, "Avatar is required"));
+//   }
+
+//   const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+//   if (!avatar) {
+//     return res
+//       .status(400)
+//       .json(new ApiResponse(400, {}, "Avatar file is required"));
+//   }
+
+//   // DB Entry
+//   // Role-based document creation
+//   let user;
+//   if (role === "driver") {
+//     // Create driver with required fields (initialize empty values)
+//     user = await Driver.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//       licenseNumber: "T",
+//       vehicleDetails: {
+//         vehicleType: "",
+//         model: "",
+//         registrationNumber: "",
+//         color: "",
+//       },
+//     });
+//   } else if (role === "admin") {
+//     // Create driver with required fields (initialize empty values)
+//     user = await Admin.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//       // licenseNumber: "TEMP_LICENSE", // Placeholder (update later)
+//       // vehicleDetails: {
+//       //   vehicleType: "TEMP_TYPE",
+//       //   model: "TEMP_MODEL",
+//       //   registrationNumber: "TEMP_REG",
+//       //   color: "TEMP_COLOR",
+//       // },
+//     });
+//   } else {
+//     // Create regular user
+//     user = await User.create({
+//       fullName,
+//       email,
+//       userName: userName.toLowerCase(),
+//       password,
+//       role,
+//       avatar: avatar.url,
+//     });
+//   }
+//   /* const user = await User.create({
+//     fullName: fullName,
+//     avatar: avatar?.url,
+//     email: email,
+//     password: password,
+//     role: role,
+//     userName: userName.toLowerCase(),
+//   }); */
+
+//   const createdUser = await User.findById(user._id).select(
+//     "-password -refreshToken"
+//   );
+
+//   if (!createdUser) {
+//     throw new ApiError(500, "Something went wrong while registering user.");
+//   }
+//   return res
+//     .status(201)
+//     .json(new ApiResponse(201, createdUser, "Successfully Registered"));
+// });
